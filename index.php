@@ -14,6 +14,7 @@ else $_ISPC=true;
 $ip=$_SERVER['REMOTE_ADDR'];
 $cat=$_GET["cat"];
 $p=$_GET["p"];
+$resp=$_GET["resp"];
 $search=$_GET["search"];
 $siteurl="http://195.88.208.101/kinopub";
 $CLIENT_ID="xbmc";
@@ -26,7 +27,7 @@ $_MENU=array();
 $_MENU[]=["title"=>"kinopub","logo_30x30"=>"https://kino.pub/images/logo.png","playlist_url"=>"$siteurl/"];
 $_MENU[]=["title"=>"Поиск","search_on"=>"Название или имя","logo_30x30"=>"$siteurl/icon/search.png","playlist_url"=>"$siteurl/?cat=search"];
 
-$_MENU[]=["title"=>"ТВ","logo_30x30"=>"$siteurl/icon/sport.png","playlist_url"=>"$siteurl/?cat=tv"];
+$_MENU[]=["title"=>"ТВ","logo_30x30"=>"$siteurl/icon/sport.png","parser"=>"https://api.service-kp.com/v1/tv/index?access_token=$_COOKIE[access_token]","playlist_url"=>"$siteurl/?cat=tv&resp=md5hash"];
 
 $_MENU[]=["title"=>"Новинки","logo_30x30"=>"$siteurl/icon/new_releases.png","playlist_url"=>"$siteurl/?cat=".urlencode("type=popular")."&ttl=".urlencode("Новинки")];
 $_MENU[]=["title"=>"Подборки","logo_30x30"=>"$siteurl/icon/list.png","playlist_url"=>"$siteurl/?cat=collections&ttl=".urlencode("Подборки")]; 
@@ -149,14 +150,15 @@ else{
 			}
 		}	
 	
-		
+		 
 	}
 	elseif($cat=="tv"){
 		$TITLE="TV ";
 		$_PL["style"]["channels"]["chnumber"]["default"]["display"]="";
 		$_PL["style"]["channels"]["chnumber"]["selected"]["display"]="";
 		$_PL["is_iptv"]=1;
-		$res=request("https://api.service-kp.com/v1/tv/index",3600);
+		if(!empty($resp)) $res=$resp;
+		else $res=request("https://api.service-kp.com/v1/tv/index",3600);
 		foreach($res["channels"] as $k=>$v){
 			$_CH[]=["logo_30x30"=>$v["logos"]["s"],"title"=>$v["title"],"stream_url"=>$v["stream"]];
 		}
