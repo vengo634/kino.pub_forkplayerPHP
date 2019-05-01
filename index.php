@@ -132,6 +132,9 @@ else{
 				"hardware"=> "$_GET[box_hardware]",
 				"software"=> "ForkPlayer2.5"
 			]);
+		$_CH[]=["logo_30x30"=>"none","title"=>"Добавить этот портал в закладки / стартовое меню","playlist_url"=>"AddFavorite(Кинопаб,https://kino.pub/images/logo.png,http://195.88.208.101/kinopub/);"];	
+		$_CH[]=["logo_30x30"=>"none","title"=>"Добавить этот портал в Глобальный поиск","playlist_url"=>"AddSearch(Кинопаб,https://kino.pub/images/logo.png,http://195.88.208.101/kinopub/?cat=search);"];	
+		
 		$main=["Популярные фильмы"=>"type=movie&sort=views-&conditions=".urlencode("year=".date("Y")),
 			"Новые фильмы"=>"type=movie&sort=created-",
 			"Популярные сериалы"=>"type=serial&sort=watchers-",
@@ -463,7 +466,6 @@ function request($u,$data=""){
 		$u.="access_token=$_COOKIE[access_token]";
 	}
 	curl_setopt($ch, CURLOPT_URL, $u);
-	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 	$res=curl_exec($ch);
 	$jsonRes=json_decode($res,true);
 	if(isset($jsonRes["error"])) $_PL["notify"].=" $jsonRes[error]";
