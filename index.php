@@ -15,6 +15,10 @@ $ip=$_SERVER['REMOTE_ADDR'];
 $cat=$_GET["cat"];
 $p=$_GET["p"];
 $resp=$_GET["resp"];
+if(isset($_GET['search'])&&strpos($_GET["search"],";&#")!==false){
+	$_GET["search"]=str_replace("%20"," ",html_entity_decode($_GET["search"]));
+	header("decsearch: ".$_GET["search"]);
+}
 $search=$_GET["search"];
 $siteurl="http://195.88.208.101/kinopub";
 $CLIENT_ID="xbmc";
@@ -185,7 +189,7 @@ else{
 				foreach($v["files"] as $kk=>$vv){
 					//$SUB2=[];
 					foreach($vv["url"] as $kkk=>$vvv){
-						$SUB[]=["ident"=>"kinopub$_GET[id]","logo_30x30"=>$_CH[0]["logo_30x30"],"title"=>"$vv[quality] $kkk ".$res["item"]["title"],"stream_url"=>$vvv,"subtitles"=>$subtitles,"description"=>"$audio<br>Качество: $vv[quality]<br>Тип видеопотока: $kkk<br>".$res["item"]["title"],"event"=>["onstartvideo"=>"$siteurl/?cat=watching&id=$_GET[id]&time=0&event=onstartvideo&video=$v[number]","onstopvideo"=>"$siteurl/?cat=watching&id=$_GET[id]&time=[TIME]&event=onstopvideo&video=$v[number]"]];
+						$SUB[]=["ident"=>"kinopub$_GET[id]","logo_30x30"=>$_CH[0]["logo_30x30"],"title"=>"$vv[quality] $kkk ".$res["item"]["title"],"stream_url"=>$vvv,"subtitles"=>$subtitles,"description"=>"$audio<br>Качество: $vv[quality]<br>Тип видеопотока: $kkk<br>".$res["item"]["title"],"event"=>["onstartvideo"=>"$siteurl/?cat=watching&id=$_GET[id]&time=0&event=onstartvideo&video=$v[number]","onstopvideo"=>"$siteurl/?cat=watching&id=$_GET[id]&curTime=[curTime]&totalTime=[totalTime]&event=onstopvideo&video=$v[number]"]];
 					}					
 					//$SUB[]=["logo_30x30"=>"none","title"=>"$vv[quality]","playlist_url"=>"submenu","submenu"=>$SUB2];
 				}
