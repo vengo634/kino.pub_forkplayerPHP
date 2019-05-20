@@ -34,7 +34,8 @@ $_MENU[]=["title"=>"Поиск","search_on"=>"Название или имя","l
 $_MENU[]=["title"=>"ТВ","logo_30x30"=>"$siteurl/icon/sport.png","parser"=>"https://api.service-kp.com/v1/tv/index?access_token=$_COOKIE[access_token]","playlist_url"=>"$siteurl/?cat=tv&resp=md5hash"];
 
 $_MENU[]=["title"=>"Новинки","logo_30x30"=>"$siteurl/icon/new_releases.png","playlist_url"=>"$siteurl/?cat=".urlencode("type=popular")."&ttl=".urlencode("Новинки")];
-$_MENU[]=["title"=>"Подборки","logo_30x30"=>"$siteurl/icon/list.png","playlist_url"=>"$siteurl/?cat=collections&ttl=".urlencode("Подборки")]; 
+$_MENU[]=["title"=>"Подборки","logo_30x30"=>"$siteurl/icon/list.png","playlist_url"=>"$siteurl/?cat=collections&ttl=".urlencode("Подборки")];
+$_MENU[]=["title"=>"Спидтест","logo_30x30"=>"none","playlist_url"=>"$siteurl/?cat=speedtest"]; 
 
 $SUB=[];
 $biblioteka=["Фильмы|type=movie|movie.png",
@@ -81,7 +82,40 @@ $_PL["style"]["menu"]["parent"]["selected"]["color"]="white";
 $_PL["color"]="#b0b1b5";
 $_PL["icon"]="https://kino.pub/images/logo.png";
 
+if(isset($_GET["speedtestserv"])){
+		$iframe='<body style="background-color:black;color:white;text-align:center;">
+		<div id="resspeed" style="font-size:140%;">Измерение скорости к серверу {loc}, ожидайте...</div>
+		<script>
+		var downloadSize = 5; //Mb
+		var fileURL = "https://{loc}-speed.streambox.in/garbage.php?r="+Math.random()+"&ckSize="+downloadSize;
 
+var request = new XMLHttpRequest(); 
+request.open("GET", fileURL, true);
+var startTime = (new Date()).getTime();
+var endTime = startTime;
+request.onreadystatechange = function () {
+    if (request.readyState == 2)
+    {
+        //ready state 2 is when the request is sent
+        startTime = (new Date().getTime());
+    }
+    if (request.readyState == 4)
+    {
+        endTime = (new Date()).getTime();
+       
+        var time = (endTime - startTime) / 1000;
+        var sizeInBits = downloadSize * 8;
+        var speed = ((sizeInBits / time)).toFixed(2);
+        console.log(downloadSize, time, speed);
+		document.getElementById("resspeed").innerHTML="{loc}: "+speed+"Mbit/s";
+    }
+}
+request.send();
+</script>
+</body>';
+			print str_replace("{loc}",$_GET["speedtestserv"],$iframe);
+			exit;
+}
 if(isset($_GET["code"])){
 	$res=request("https://api.service-kp.com/oauth2/device",$data = ["grant_type"=> "device_token",
             "client_id"=> $CLIENT_ID,
@@ -159,6 +193,14 @@ else{
 	
 		 
 	}
+	elseif($cat=="speedtest"){
+
+		$TITLE="Speedtest ";
+		$loc=["de", "nl", "ru"];
+
+		foreach($loc as $k=>$v) $_CH[]=["logo_30x30"=>"","title"=>"$v - сервер","playlist_url"=>"cmd:setdescription($k,<iframe src='$siteurl/?speedtestserv=$v' width=500 height=400></iframe>);","description"=>"Нажмите, чтобы измерить"];
+	
+	}
 	elseif($cat=="tv"){
 		$TITLE="TV ";
 		$_PL["style"]["channels"]["chnumber"]["default"]["display"]="";
@@ -189,7 +231,7 @@ else{
 				foreach($v["files"] as $kk=>$vv){
 					//$SUB2=[];
 					foreach($vv["url"] as $kkk=>$vvv){
-						$SUB[]=["ident"=>"kinopub$_GET[id]","logo_30x30"=>$_CH[0]["logo_30x30"],"title"=>"$vv[quality] $kkk ".$res["item"]["title"],"stream_url"=>$vvv,"subtitles"=>$subtitles,"description"=>"$audio<br>Качество: $vv[quality]<br>Тип видеопотока: $kkk<br>".$res["item"]["title"],"event"=>["onstartvideo"=>"$siteurl/?cat=watching&id=$_GET[id]&time=0&event=onstartvideo&video=$v[number]","onstopvideo"=>"$siteurl/?cat=watching&id=$_GET[id]&curTime=[curTime]&totalTime=[totalTime]&event=onstopvideo&video=$v[number]"]];
+						$SUB[]=["ident"=>"kinopub$_GET[id]","start_time"=>0,"logo_30x30"=>$_CH[0]["logo_30x30"],"title"=>"$vv[quality] $kkk ".$res["item"]["title"],"stream_url"=>$vvv,"subtitles"=>$subtitles,"description"=>"$audio<br>Качество: $vv[quality]<br>Тип видеопотока: $kkk<br>".$res["item"]["title"],"event"=>["onstartvideo"=>"$siteurl/?cat=watching&id=$_GET[id]&time=0&event=onstartvideo&video=$v[number]","onstopvideo"=>"$siteurl/?cat=watching&id=$_GET[id]&curTime=[curTime]&totalTime=[totalTime]&event=onstopvideo&video=$v[number]"]];
 					}					
 					//$SUB[]=["logo_30x30"=>"none","title"=>"$vv[quality]","playlist_url"=>"submenu","submenu"=>$SUB2];
 				}
