@@ -86,7 +86,7 @@ if(isset($_GET["speedtestserv"])){
 		$iframe='<body style="background-color:black;color:white;text-align:center;">
 		<div id="resspeed" style="font-size:140%;">Измерение скорости к серверу {loc}, ожидайте...</div>
 		<script>
-		var downloadSize = 5; //Mb
+		var downloadSize = 2; //Mb
 		var fileURL = "https://{loc}-speed.streambox.in/garbage.php?r="+Math.random()+"&ckSize="+downloadSize;
 
 var request = new XMLHttpRequest(); 
@@ -431,6 +431,12 @@ if(!empty($TITLE)) {
 	$_PL["title"]="$TITLE kinopub";
 	$_PL["navigate"]="Кинопаб (kinopub) - $TITLE";
 }
+
+// Установка на желтую кнопку своей ссылки
+for($i=0;$i<count($_CH);$i++){
+	$_CH[$i]["yellow"]=["title"=>"Главная КиноПаб","playlist_url"=>"$siteurl"];
+}
+// End Установка на желтую кнопку своей ссылки
 
 $_PL["menu"]=$_MENU;
 $_PL["channels"]=$_CH;
