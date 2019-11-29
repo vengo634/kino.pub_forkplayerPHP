@@ -20,7 +20,8 @@ if(isset($_GET['search'])&&strpos($_GET["search"],";&#")!==false){
 	header("decsearch: ".$_GET["search"]);
 }
 $search=$_GET["search"];
-$siteurl="http://195.88.208.101/kinopub";
+$siteurl="http://p.lnka.ru/kinopub";
+$siteicon="http://p.lnka.ru/kinopubicon";
 $CLIENT_ID="xbmc";
 $CLIENT_SECRET = "cgg3gtifu46urtfp2zp1nqtba0k2ezxh";
 $logged=0;
@@ -29,13 +30,14 @@ $_PL=array();
 $_CH=array();
 $_MENU=array();
 $_MENU[]=["title"=>"kinopub","logo_30x30"=>"https://kino.pub/images/logo.png","playlist_url"=>"$siteurl/"];
-$_MENU[]=["title"=>"Поиск","search_on"=>"Название или имя","logo_30x30"=>"$siteurl/icon/search.png","playlist_url"=>"$siteurl/?cat=search"];
+$_MENU[]=["title"=>"Поиск","search_on"=>"Название или имя","logo_30x30"=>"$siteicon/search.png","playlist_url"=>"$siteurl/?cat=search"];
 
-$_MENU[]=["title"=>"ТВ","logo_30x30"=>"$siteurl/icon/sport.png","parser"=>"https://api.service-kp.com/v1/tv/index?access_token=$_COOKIE[access_token]","playlist_url"=>"$siteurl/?cat=tv&resp=md5hash"];
+$_MENU[]=["title"=>"ТВ","logo_30x30"=>"$siteicon/sport.png","parser"=>"https://api.service-kp.com/v1/tv/index?access_token=$_COOKIE[access_token]","playlist_url"=>"$siteurl/?cat=tv&resp=postmd5"];
 
-$_MENU[]=["title"=>"Новинки","logo_30x30"=>"$siteurl/icon/new_releases.png","playlist_url"=>"$siteurl/?cat=".urlencode("type=popular")."&ttl=".urlencode("Новинки")];
-$_MENU[]=["title"=>"Подборки","logo_30x30"=>"$siteurl/icon/list.png","playlist_url"=>"$siteurl/?cat=collections&ttl=".urlencode("Подборки")];
+$_MENU[]=["title"=>"Новинки","logo_30x30"=>"$siteicon/new_releases.png","playlist_url"=>"$siteurl/?cat=".urlencode("type=popular")."&ttl=".urlencode("Новинки")];
+$_MENU[]=["title"=>"Подборки","logo_30x30"=>"$siteicon/list.png","playlist_url"=>"$siteurl/?cat=collections&ttl=".urlencode("Подборки")];
 $_MENU[]=["title"=>"Спидтест","logo_30x30"=>"none","playlist_url"=>"$siteurl/?cat=speedtest"]; 
+//$_MENU[]=["title"=>"Test ACE Stream","logo_30x30"=>"none","playlist_url"=>"$siteurl/?do=othertest&mbaceip=MB_ACE_IP&mbparser=md5mbhash","local"=>2,"mb_parser"=>"http://MB_ACE_IP:6878/webui/api/service?method=get_version&format=jsonp&callback=mycallback"]; 
 
 $SUB=[];
 $biblioteka=["Фильмы|type=movie|movie.png",
@@ -49,9 +51,9 @@ $biblioteka=["Фильмы|type=movie|movie.png",
 				];
 foreach($biblioteka as $k=>$v){
 	$t=explode("|",$v);
-	$SUB[]=["title"=>"$t[0]","logo_30x30"=>"$siteurl/icon/$t[2]","playlist_url"=>"$siteurl/?cat=".urlencode($t[1])."&ttl=".urlencode($t[0])];
+	$SUB[]=["title"=>"$t[0]","logo_30x30"=>"$siteicon/$t[2]","playlist_url"=>"$siteurl/?cat=".urlencode($t[1])."&ttl=".urlencode($t[0])];
 }
-$_MENU[]=["title"=>"Библиотека","logo_30x30"=>"$siteurl/icon/drop_down.png","playlist_url"=>"submenu","submenu"=>$SUB]; 
+$_MENU[]=["title"=>"Библиотека","logo_30x30"=>"$siteicon/drop_down.png","playlist_url"=>"submenu","submenu"=>$SUB]; 
 
 $_PL["style"]["cssid"]["menu"]["backgroundColor"]="#171a23";
 
@@ -115,9 +117,25 @@ request.send();
 </body>';
 			print str_replace("{loc}",$_GET["speedtestserv"],$iframe);
 			exit;
+}	
+if($_GET["code"]=="exit"){
+	$_PL["setcookie"]["expires_in"]="";
+	$_PL["setcookie"]["access_token"]="";
+	$_PL["setcookie"]["refresh_token"]="";
+	$_COOKIE=[];
+	unset($_GET["code"]);
 }
-if(isset($_GET["code"])){
-	$res=request("https://api.service-kp.com/oauth2/device",$data = ["grant_type"=> "device_token",
+elseif(isset($_GET["code"])){
+
+	if($_GET["code"]=="prolong"){
+		$res=request("https://api.service-kp.com/oauth2/device",$_COOKIE = ["grant_type"=> "refresh_token",
+            "client_id"=> $CLIENT_ID,
+            "client_secret"=> $CLIENT_SECRET,
+			"refresh_token"=>$_COOKIE["refresh_token"]
+        ]);
+		unset($_GET["code"]);
+	}
+	else $res=request("https://api.service-kp.com/oauth2/device",$data = ["grant_type"=> "device_token",
             "client_id"=> $CLIENT_ID,
             "client_secret"=> $CLIENT_SECRET,
 			"code"=>$_GET["code"]
@@ -131,15 +149,23 @@ if(isset($_GET["code"])){
 		valid_auth($res);
 	}
 }
-else valid_auth($_COOKIE);
+else {
+	if(!empty($_COOKIE["access_token"])&&$_COOKIE["expires_in"]<time()){
+		header("valid_auth: reauth");
+		$_CH[]=["logo_30x30"=>"","location"=>3,"title"=>"Продление токена.","playlist_url"=>"$siteurl/?code=prolong&cat=$cat&id=$id&act=$act"];
+		$_PL["channels"]=$_CH;
+		return;
+	}
+	valid_auth($_COOKIE);
+}
 
-if(!$logged&&!isset($_GET["code"])){	
+if(!$logged&&!isset($_GET["code"])){
 	$_PL["navigate"]="Кинопаб Активация";
 	$res=request("https://api.service-kp.com/oauth2/device",$data = ["grant_type"=> "device_code",
             "client_id"=> $CLIENT_ID,
             "client_secret"=> $CLIENT_SECRET
         ]);
-	$_CH[]=["logo_30x30"=>"$siteurl/icon/new_releases.png","title"=>"Проверить активацию","playlist_url"=>"$siteurl/?code=$res[code]","description"=>'<style>
+	$_CH[]=["logo_30x30"=>"$siteicon/new_releases.png","title"=>"Проверить активацию","playlist_url"=>"$siteurl/?code=$res[code]","description"=>'<style>
  h1,h4,h6 {
      text-align:center;
  }
@@ -162,7 +188,7 @@ else{
 	$SUB=[];
 	$SUB[]=["title"=>"Мои закладки","logo_30x30"=>"","playlist_url"=>"$siteurl/?cat=bookmarks"];
 	$SUB[]=["title"=>"Я смотрю","logo_30x30"=>"","playlist_url"=>"$siteurl/?cat=watching&n=serials"];
-	$_MENU[]=["title"=>"Закладки","logo_30x30"=>"$siteurl/icon/drop_down.png","playlist_url"=>"submenu","submenu"=>$SUB];
+	$_MENU[]=["title"=>"Закладки","logo_30x30"=>"$siteicon/drop_down.png","playlist_url"=>"submenu","submenu"=>$SUB];
 
 	if(empty($_GET["cat"])){
 		$_PL["navigate"]="Кинопаб (kinopub)";
@@ -170,8 +196,8 @@ else{
 				"hardware"=> "$_GET[box_hardware]",
 				"software"=> "ForkPlayer2.5"
 			]);
-		$_CH[]=["logo_30x30"=>"none","title"=>"Добавить этот портал в закладки / стартовое меню","playlist_url"=>"AddFavorite(Кинопаб,https://kino.pub/images/logo.png,http://195.88.208.101/kinopub/);"];	
-		$_CH[]=["logo_30x30"=>"none","title"=>"Добавить этот портал в Глобальный поиск","playlist_url"=>"AddSearch(Кинопаб,https://kino.pub/images/logo.png,http://195.88.208.101/kinopub/?cat=search);"];	
+		$_CH[]=["logo_30x30"=>"none","title"=>"Добавить этот портал в закладки / стартовое меню","playlist_url"=>"AddFavorite(Кинопаб,https://kino.pub/images/logo.png,http://p.lnka.ru/kinopub/);"];	
+		$_CH[]=["logo_30x30"=>"none","title"=>"Добавить этот портал в Глобальный поиск","playlist_url"=>"AddSearch(Кинопаб,https://kino.pub/images/logo.png,http://p.lnka.ru/kinopub/?cat=search);"];	
 		
 		$main=["Популярные фильмы"=>"type=movie&sort=views-&conditions=".urlencode("year=".date("Y")),
 			"Новые фильмы"=>"type=movie&sort=created-",
@@ -206,7 +232,7 @@ else{
 		$_PL["style"]["channels"]["chnumber"]["default"]["display"]="";
 		$_PL["style"]["channels"]["chnumber"]["selected"]["display"]="";
 		$_PL["is_iptv"]=1;
-		if(!empty($resp)) $res=$resp;
+		if(!empty($resp)) $res=json_decode($resp,true);
 		else $res=request("https://api.service-kp.com/v1/tv/index",3600);
 		foreach($res["channels"] as $k=>$v){
 			$_CH[]=["logo_30x30"=>$v["logos"]["s"],"title"=>$v["title"],"stream_url"=>$v["stream"]];
@@ -237,13 +263,13 @@ else{
 				}
 				if(empty($v["title"])) $v["title"]="Файлы и папки";				
 				if(count($res["item"]["videos"])==1) $_CH=array_merge($_CH,$SUB);
-				else $_CH[]=["logo_30x30"=>"$siteurl/icon/pl.png","title"=>"$v[title]","playlist_url"=>"submenu","submenu"=>$SUB];
+				else $_CH[]=["logo_30x30"=>"$siteicon/pl.png","title"=>"$v[title]","playlist_url"=>"submenu","submenu"=>$SUB];
 			}
 			
 		}
 		else{
-			if($res["item"]["in_watchlist"]) $_CH[]=["logo_30x30"=>"$siteurl/icon/bookmark_empty.png","title"=>"Я смотрю. Отписаться?","playlist_url"=>"$siteurl/?cat=watching&id=$_GET[id]&act=togglewatchlist"];
-			else $_CH[]=["logo_30x30"=>"$siteurl/icon/bookmark_empty.png","title"=>"Подписаться?","playlist_url"=>"$siteurl/?cat=watching&id=$_GET[id]&act=togglewatchlist"];
+			if($res["item"]["in_watchlist"]) $_CH[]=["logo_30x30"=>"$siteicon/bookmark_empty.png","title"=>"Я смотрю. Отписаться?","playlist_url"=>"$siteurl/?cat=watching&id=$_GET[id]&act=togglewatchlist"];
+			else $_CH[]=["logo_30x30"=>"$siteicon/bookmark_empty.png","title"=>"Подписаться?","playlist_url"=>"$siteurl/?cat=watching&id=$_GET[id]&act=togglewatchlist"];
 			$q=[];$SUB=[];
 			$qq=["http","hls","hls4","hls2"];
 			foreach($res["item"]["seasons"] as $sk=>$sv){
@@ -272,10 +298,10 @@ else{
 			foreach($q as $k=>$v){
 				$SUB2=[];
 				foreach($v as $kk=>$vv)
-					$SUB2[]=["logo_30x30"=>"$siteurl/icon/pl.png","title"=>"$k $vv","playlist_url"=>"submenu","submenu"=>$SUB[$k.$vv]];
-				$_CH[]=["logo_30x30"=>"$siteurl/icon/pl.png","title"=>"$k","playlist_url"=>"submenu","submenu"=>$SUB2];
+					$SUB2[]=["logo_30x30"=>"$siteicon/pl.png","title"=>"$k $vv","playlist_url"=>"submenu","submenu"=>$SUB[$k.$vv]];
+				$_CH[]=["logo_30x30"=>"$siteicon/pl.png","title"=>"$k","playlist_url"=>"submenu","submenu"=>$SUB2];
 		
-				//$_CH[]=["logo_30x30"=>"$siteurl/icon/pl.png","title"=>"$v[title]","playlist_url"=>"submenu","submenu"=>$SUB];
+				//$_CH[]=["logo_30x30"=>"$siteicon/pl.png","title"=>"$v[title]","playlist_url"=>"submenu","submenu"=>$SUB];
 			}
 		}
 		$res=request("https://api.service-kp.com/v1/items/similar?id=$_GET[id]",7200);
@@ -342,7 +368,7 @@ else{
 			$res=request("https://api.service-kp.com/v1/bookmarks/remove-item?access_token=$_COOKIE[access_token]","folder=$_GET[folder]&item=$_GET[id]");
 			if($res["status"]==200) {
 				$_PL["notify"]="Закладка $_GET[title] удалена!";
-				$_PL["cmd"]="reload();"; 
+				$_PL["cmd"]="reload(2);"; 
 			}
 			else $_PL["cmd"]="stop();";
 		}
@@ -354,7 +380,7 @@ else{
 				$_PL["cmd"]="stop();";
 			}
 			else{
-				$_CH[]=["title"=>"Добавить в новую папку","search_on"=>"Введите имя папки","description"=>"","logo_30x30"=>"$siteurl/icon/add_box.png","playlist_url"=>"$siteurl/?cat=$cat&id=$_GET[id]"];
+				$_CH[]=["title"=>"Добавить в новую папку","search_on"=>"Введите имя папки","description"=>"","logo_30x30"=>"$siteicon/add_box.png","playlist_url"=>"$siteurl/?cat=$cat&id=$_GET[id]"];
 				$res=request("https://api.service-kp.com/v1/bookmarks");
 				for($i=0;$i<count($res["items"]);$i++) {		
 					$el=$res["items"][$i];
@@ -387,7 +413,7 @@ else{
 				$el=$res["items"][$i];
 				$_CH[]=["logo_30x30"=>"none","title"=>$el["title"]." ($el[count])","description"=>"Количество: $el[count]<br>Просмотров: $el[views]","playlist_url"=>"$siteurl/?cat=$cat&folder=$el[id]&ttl=".urlencode($el["title"]),"menu"=>[["title"=>"Удалить папку","description"=>"Вы уверены что хотите удалить $el[title]?","playlist_url"=>"confirm","confirm"=>["$siteurl/?cat=$cat&folder=$el[id]&act=del",""]]]];
 			}
-			$_CH[]=["title"=>"Добавить папку","search_on"=>"Введите имя папки","description"=>"","logo_30x30"=>"$siteurl/icon/add_box.png","playlist_url"=>"$siteurl/?cat=$cat"];
+			$_CH[]=["title"=>"Добавить папку","search_on"=>"Введите имя папки","description"=>"","logo_30x30"=>"$siteicon/add_box.png","playlist_url"=>"$siteurl/?cat=$cat"];
 		}
 		if(count($_CH)==0) $_CH[]=["title"=>"Здесь пусто","logo_30x30"=>"none"];
 	}
@@ -397,7 +423,7 @@ else{
 			$SUB[]=["title"=>"Новые","logo_30x30"=>"none","playlist_url"=>"$siteurl/?cat=$cat&sort=updated-"];
 			$SUB[]=["title"=>"Популярные","logo_30x30"=>"none","playlist_url"=>"$siteurl/?cat=$cat&sort=views-"];
 			$SUB[]=["title"=>"Просматриваемые","logo_30x30"=>"none","playlist_url"=>"$siteurl/?cat=$cat&sort=watchers-"];
-			if(empty($_GET["sort"])) $_CH[]=["logo_30x30"=>"$siteurl/icon/list.png","title"=>"Сортировка: по обновлению","playlist_url"=>"submenu","submenu"=>$SUB,""];
+			if(empty($_GET["sort"])) $_CH[]=["logo_30x30"=>"$siteicon/list.png","title"=>"Сортировка: по обновлению","playlist_url"=>"submenu","submenu"=>$SUB,""];
 			$res=request("https://api.service-kp.com/v1/collections?perpage=40&sort=$_GET[sort]&page=$p",9600);
 			//print_r($res);
 			for($i=0;$i<count($res["items"]);$i++){
@@ -412,7 +438,7 @@ else{
 		$SUB[]=["title"=>"Горячие видео","logo_30x30"=>"none","playlist_url"=>"$siteurl/?cat=$cat&podb=/hot"];
 		$SUB[]=["title"=>"Популярные видео","logo_30x30"=>"none","playlist_url"=>"$siteurl/?cat=$cat&podb=/popular"];
 		$SUB[]=["title"=>"Свежие видео","logo_30x30"=>"none","playlist_url"=>"$siteurl/?cat=$cat&podb=/fresh"];
-		if(empty($_GET["podbid"])&&empty($_GET["podb"])&&strpos($cat,"sort")===false) $_CH[]=["logo_30x30"=>"$siteurl/icon/list.png","title"=>"Сортировка: по обновлению","playlist_url"=>"submenu","submenu"=>$SUB,"description"=>"Горячие / Популярные / Свежие"];
+		if(empty($_GET["podbid"])&&empty($_GET["podb"])&&strpos($cat,"sort")===false) $_CH[]=["logo_30x30"=>"$siteicon/list.png","title"=>"Сортировка: по обновлению","playlist_url"=>"submenu","submenu"=>$SUB,"description"=>"Горячие / Популярные / Свежие"];
 		if(!empty($_GET["podbid"])) $res=request("https://api.service-kp.com/v1/collections/view?id=$_GET[podbid]&page=$p",7200);
 		else $res=request("https://api.service-kp.com/v1/items$_GET[podb]?$cat&page=$p",7200);
 		//if($ip=="185.158.114.122") print_r($res);
@@ -440,9 +466,8 @@ for($i=0;$i<count($_CH);$i++){
 
 $_PL["menu"]=$_MENU;
 $_PL["channels"]=$_CH;
+$_PL["all_local"]="directly";
 print json_encode($_PL);
-
-
 
 function addPages($p){
 	global $siteurl,$_PL,$TITLE;
@@ -455,38 +480,20 @@ function itemToCh($el){
 	foreach($el["genres"] as $k=>$v) $genres.="$v[title] ";
 	$countries="";
 	foreach($el["countries"] as $k=>$v) $countries.="$v[title] ";
-	if($_GET["cat"]=="bookmarks") $menu[]=["logo_30x30"=>"$siteurl/icon/add_box.png","title"=>"Удалить из закладок kinopub","playlist_url"=>"$siteurl/?cat=bookmarks&folder=$_GET[folder]&act=delbookm&id=$el[id]&title=".urlencode($el["title"])];
-	else $menu[]=["logo_30x30"=>"$siteurl/icon/add_box.png","title"=>"Добавить в закладки kinopub","playlist_url"=>"$siteurl/?cat=bookmarks&act=addbookm&id=$el[id]&title=".urlencode($el["title"])];
+	if($_GET["cat"]=="bookmarks") $menu[]=["logo_30x30"=>"$siteicon/add_box.png","title"=>"Удалить из закладок kinopub","playlist_url"=>"$siteurl/?cat=bookmarks&folder=$_GET[folder]&act=delbookm&id=$el[id]&title=".urlencode($el["title"])];
+	else $menu[]=["logo_30x30"=>"$siteicon/add_box.png","title"=>"Добавить в закладки kinopub","playlist_url"=>"$siteurl/?cat=bookmarks&act=addbookm&id=$el[id]&title=".urlencode($el["title"])];
 	return ["logo_30x30"=>$el["posters"]["small"],"title"=>$el["title"]." ".$el["year"]." ".$genres,"playlist_url"=>"$siteurl/?cat=view&id=$el[id]","description"=>"<div id=\"poster\" style=\"float:left;margin:0px 13px 1px 0px;\"><img src=\"".$el["posters"]["small"]."\" style=\"width:180px;float:left;\" /></div> Рейтинг imdb $el[imdb_rating] kp $el[kinopoisk_rating]<br>Год выхода	<span style=\"color:#6cc788;\">$el[year]</span><br>Страна	<span style=\"color:#6cc788;\">$countries</span><br>Жанр	<span style=\"color:#6cc788;\">$genres</span><br>Режиссёр	<span style=\"color:#6cc788;\">$el[director]</span><br>В ролях	<span style=\"color:#6cc788;\">".mb_substr($el["cast"],0,80)."</span><br>Длительность	<span style=\"color:#6cc788;\">".seconds_to_time($el["duration"]["average"])." / (".ceil($el["duration"]["average"]/60)." мин)</span><br>Субтитры	<span style=\"color:#6cc788;\">$el[subtitles]</span><br>Просмотрели	<span style=\"color:#6cc788;\">$el[views] раз</span><br>$el[plot]","menu"=>$menu];
 }
 
 function valid_auth($data){
 	global $_PL,$logged,$CLIENT_ID,$CLIENT_SECRET;
 	if(empty($data["access_token"])) $logged=0;
-	elseif($data["expires_in"]<time()){
-		header("valid_auth: reauth");
-		$res=request("https://api.service-kp.com/oauth2/device",$data = ["grant_type"=> "refresh_token",
-            "client_id"=> $CLIENT_ID,
-            "client_secret"=> $CLIENT_SECRET,
-			"refresh_token"=>$data["refresh_token"]
-        ]);
-		if(!empty($res["refresh_token"])){
-			$res["expires_in"]=time()+$res["expires_in"];
-			$_PL["setcookie"]=$res;
-			$logged=1;
-		}
-		else{
-			$_PL["setcookie"]["access_token"]="";
-			$_PL["setcookie"]["refresh_token"]="";
-			$_PL["setcookie"]["expires_in"]="";
-		}
-	}
 	else $logged=1;	
 }
 
 
 function request($u,$data=""){
-	global $ip,$_PL;
+	global $ip,$_PL,$_CH,$siteurl;
 	$cacheName="";
 	if(!is_array($data)&&!is_string($data)&&intval($data)>30){
 		if(!preg_match("/\/(user|bookmarks)/",$u)) {
@@ -520,7 +527,14 @@ function request($u,$data=""){
 	curl_setopt($ch, CURLOPT_URL, $u);
 	$res=curl_exec($ch);
 	$jsonRes=json_decode($res,true);
-	if(isset($jsonRes["error"])) $_PL["notify"].=" $jsonRes[error]";
+	if(isset($jsonRes["error"])) {
+		if(preg_match("/unauthorized/",$jsonRes["error"])){
+			$_CH[]=["logo_30x30"=>"","location"=>1,"title"=>"Удалить авторизацию.","playlist_url"=>"$siteurl/?code=exit"];
+			$_PL["channels"]=$_CH;
+			return;
+		}
+		$_PL["notify"].=" $jsonRes[error]";
+	}
 	if(!empty($cacheName)&&($jsonRes["status"]==200||!isset($jsonRes["status"]))) file_put_contents($cacheName,$res);
 	//print $u."\n".$res;
 	return $jsonRes;
