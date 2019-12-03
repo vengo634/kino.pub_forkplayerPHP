@@ -1,5 +1,4 @@
 <?php
-
 header('Access-Control-Allow-Origin: *');
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Accept, Content-Type");
@@ -59,12 +58,12 @@ $_PL["style"]["cssid"]["menu"]["backgroundColor"]="#171a23";
 
 $_PL["style"]["cssid"]["site"]["color"]="white";
 $_PL["style"]["cssid"]["site"]["backgroundColor"]="#1c202b";
-$_PL["style"]["cssid"]["site"]["fontFamily"]='BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
+//$_PL["style"]["cssid"]["site"]["fontFamily"]='sans-serif';
 
 $_PL["style"]["channels"]["chnumber"]["default"]["display"]="none";
 $_PL["style"]["channels"]["chnumber"]["selected"]["display"]="none";
 
-$_PL["style"]["channels"]["parent"]["default"]["fontSize"]=$_PL["style"]["channels"]["parent"]["selected"]["fontSize"]=$_PL["style"]["cssid"]["menu"]["fontSize"]="85%";
+//$_PL["style"]["channels"]["parent"]["default"]["fontSize"]=$_PL["style"]["channels"]["parent"]["selected"]["fontSize"]=$_PL["style"]["cssid"]["menu"]["fontSize"]="85%";
 
 $_PL["style"]["channels"]["contmenu"]["selected"]["background"]="none #02b875";
 
@@ -175,7 +174,7 @@ if(!$logged&&!isset($_GET["code"])){
 </style>
 <div>
     <h4>Активация устройства</h4>
-    <h6>код активации</h6>
+    <h6>код активации</h6> 
     <h1 class="device_code">'.$res["user_code"].'</h1>
     <div>
         Посетите <b>'.$res["verification_uri"].'</b> и введите там код активации.
@@ -189,15 +188,18 @@ else{
 	$SUB[]=["title"=>"Мои закладки","logo_30x30"=>"","playlist_url"=>"$siteurl/?cat=bookmarks"];
 	$SUB[]=["title"=>"Я смотрю","logo_30x30"=>"","playlist_url"=>"$siteurl/?cat=watching&n=serials"];
 	$_MENU[]=["title"=>"Закладки","logo_30x30"=>"$siteicon/drop_down.png","playlist_url"=>"submenu","submenu"=>$SUB];
+	$_MENU[]=["title"=>"Выйти","logo_30x30"=>"none","playlist_url"=>"$siteurl/?code=exit"];
 
 	if(empty($_GET["cat"])){
+		$_PL["typeList"]="start";
+		$_MENU[]=["title"=>"Поиск","search_on"=>"Название или имя","logo_30x30"=>"$siteicon/search.png","playlist_url"=>"$siteurl/?cat=search"];
 		$_PL["navigate"]="Кинопаб (kinopub)";
 		request("https://api.service-kp.com/v1/device/notify?access_token=$_COOKIE[access_token]",$data = ["title"=> "ForkPlayer Portal",
 				"hardware"=> "$_GET[box_hardware]",
 				"software"=> "ForkPlayer2.5"
 			]);
-		$_CH[]=["logo_30x30"=>"none","title"=>"Добавить этот портал в закладки / стартовое меню","playlist_url"=>"AddFavorite(Кинопаб,https://kino.pub/images/logo.png,http://p.lnka.ru/kinopub/);"];	
-		$_CH[]=["logo_30x30"=>"none","title"=>"Добавить этот портал в Глобальный поиск","playlist_url"=>"AddSearch(Кинопаб,https://kino.pub/images/logo.png,http://p.lnka.ru/kinopub/?cat=search);"];	
+		$_CH[]=["logo_30x30"=>"none","title"=>"Добавить в закладки / стартовое меню","playlist_url"=>"AddFavorite(Кинопаб,https://kino.pub/images/logo.png,http://p.lnka.ru/kinopub/);","position"=>"hlink"];	
+		$_CH[]=["logo_30x30"=>"none","title"=>"Добавить в Глобальный поиск","playlist_url"=>"AddSearch(Кинопаб,https://kino.pub/images/logo.png,http://p.lnka.ru/kinopub/?cat=search);","position"=>"hlink"];	
 		
 		$main=["Популярные фильмы"=>"type=movie&sort=views-&conditions=".urlencode("year=".date("Y")),
 			"Новые фильмы"=>"type=movie&sort=created-",
@@ -208,11 +210,23 @@ else{
 			"Новые ДокуФильмы"=>"type=documovie&sort=created-",
 			"Новые Докусериалы"=>"type=docuserial&sort=created-",
 			"Новые ТВ шоу"=>"type=tvshow&sort=created-"];
+			
 		
+		$res=request("https://api.service-kp.com/v1/watching/serials?subscribed=1");
+		
+		if(count($res["items"])){	
+			$_CH[]=["logo_30x30"=>"none","title"=>"Продолжить просмотр","position"=>"label","playlist_url"=>"$siteurl/?cat=watching&n=serials"];
+			for($i=0;$i<count($res["items"])&&$i<18;$i++) {
+				$el=$res["items"][$i];
+				$_CH[]=itemToCh($el);
+				$_CH[count($_CH)-1]["title"].=" ($el[new])";
+				$_CH[count($_CH)-1]["description"]="Новых серий: $el[new]<br>Всего серий: $el[total]<br>Просмотрено: $el[watched]<br>";
+			}
+		}
 		foreach($main as $k=>$v){
-			$_CH[]=["logo_30x30"=>"none","title"=>"$k","playlist_url"=>"$siteurl/?cat=".urlencode($v)];
+			$_CH[]=["logo_30x30"=>"none","title"=>"$k","position"=>"label","playlist_url"=>"$siteurl/?cat=".urlencode($v)];
 			$res=request("https://api.service-kp.com/v1/items?$v",7200);
-			for($i=0;$i<count($res["items"])&&$i<5;$i++) {		
+			for($i=0;$i<count($res["items"])&&$i<18;$i++) {		
 				$_CH[]=itemToCh($res["items"][$i]);
 			}
 		}	
@@ -433,20 +447,23 @@ else{
 			addPages($res["pagination"]);
 		}
 	else{
-		
+		$_PL["typeList"]="start";
 		$SUB=[];
-		$SUB[]=["title"=>"Горячие видео","logo_30x30"=>"none","playlist_url"=>"$siteurl/?cat=$cat&podb=/hot"];
-		$SUB[]=["title"=>"Популярные видео","logo_30x30"=>"none","playlist_url"=>"$siteurl/?cat=$cat&podb=/popular"];
-		$SUB[]=["title"=>"Свежие видео","logo_30x30"=>"none","playlist_url"=>"$siteurl/?cat=$cat&podb=/fresh"];
-		if(empty($_GET["podbid"])&&empty($_GET["podb"])&&strpos($cat,"sort")===false) $_CH[]=["logo_30x30"=>"$siteicon/list.png","title"=>"Сортировка: по обновлению","playlist_url"=>"submenu","submenu"=>$SUB,"description"=>"Горячие / Популярные / Свежие"];
+		$SUB[]=["title"=>"Горячие видео","logo_30x30"=>"none","playlist_url"=>"$siteurl/?cat=$cat&podb=/hot&ttl=$_GET[ttl]"];
+		$SUB[]=["title"=>"Популярные видео","logo_30x30"=>"none","playlist_url"=>"$siteurl/?cat=$cat&podb=/popular&ttl=$_GET[ttl]"];
+		$SUB[]=["title"=>"Свежие видео","logo_30x30"=>"none","playlist_url"=>"$siteurl/?cat=$cat&podb=/fresh&ttl=$_GET[ttl]"];
+		if(empty($_GET["podbid"])&&empty($_GET["podb"])&&strpos($cat,"sort")===false) $_CH[]=["logo_30x30"=>"$siteicon/list.png","title"=>"Сортировка: по обновлению","playlist_url"=>"submenu","submenu"=>$SUB,"description"=>"Горячие / Популярные / Свежие","position"=>"label"];
 		if(!empty($_GET["podbid"])) $res=request("https://api.service-kp.com/v1/collections/view?id=$_GET[podbid]&page=$p",7200);
 		else $res=request("https://api.service-kp.com/v1/items$_GET[podb]?$cat&page=$p",7200);
 		//if($ip=="185.158.114.122") print_r($res);
-		for($i=0;$i<count($res["items"]);$i++) {		
+		for($i=0;$i<count($res["items"]);$i++) {
 			$_CH[]=itemToCh($res["items"][$i]);
 		}
 		addPages($res["pagination"]);
-		if(empty($_GET["podbid"])) $TITLE=(empty($_GET["ttl"])?$res["items"][0]["type"]:$_GET["ttl"])." ".($res["pagination"]["current"]?" стр. ".$res["pagination"]["current"]:"");
+		if(empty($_GET["podbid"])) {
+			$TITLE=(empty($_GET["ttl"])?$res["items"][0]["type"]:$_GET["ttl"])." ".($res["pagination"]["current"]?" стр. ".$res["pagination"]["current"]:"");
+			$_PL["before"]="<div style='text-align: left;margin: 5px 47px;color: #07a366;'><span style='color: #cbcbcb;font-weight: bold;'>".(empty($_GET["ttl"])?$res["items"][0]["type"]:$_GET["ttl"])."</span> ".$_GET["podb"]."  <span style='color: #cbcbcb;font-weight: bold;float:right;'>Страница: ".$res["pagination"]["current"]." из ".$res["pagination"]["total"]."</span></div>";
+		}
 		else $TITLE="Подборка ".$res["collection"]["title"].($res["pagination"]["current"]?" стр. ".$res["pagination"]["current"]:"");
 	}
 	
@@ -460,29 +477,44 @@ if(!empty($TITLE)) {
 
 // Установка на желтую кнопку своей ссылки
 for($i=0;$i<count($_CH);$i++){
-	$_CH[$i]["yellow"]=["title"=>"Главная КиноПаб","playlist_url"=>"$siteurl"];
+	if(empty($_GET["cat"])) $_CH[$i]["yellow"]=["title"=>"Закладки КиноПаб","logo_30x30"=>"","playlist_url"=>"$siteurl/?cat=bookmarks"];
+	else $_CH[$i]["yellow"]=["title"=>"Главная КиноПаб","playlist_url"=>"$siteurl/"];
 }
 // End Установка на желтую кнопку своей ссылки
 
 $_PL["menu"]=$_MENU;
 $_PL["channels"]=$_CH;
 $_PL["all_local"]="directly";
-print json_encode($_PL);
+
 
 function addPages($p){
-	global $siteurl,$_PL,$TITLE;
-	if($p["current"]<$p["total"]) $_PL["next_page_url"]="$siteurl/?cat=$_GET[cat]&sort=$_GET[sort]&folder=$_GET[folder]&podbid=$_GET[podbid]&ttl=$_GET[ttl]&p=".($p["current"]+1);
+	global $siteurl,$_PL,$TITLE,$_CH;
+	if($_PL["typeList"]=="start"){
+		if($p["current"]>1) $_CH[]=["title"=>"Стр. ".($p["current"]-1),"playlist_url"=>"$siteurl/?cat=$_GET[cat]&sort=$_GET[sort]&folder=$_GET[folder]&podb=$_GET[podb]&podbid=$_GET[podbid]&ttl=$_GET[ttl]&p=".($p["current"]-1),"position"=>"hlink"];
+		if($p["current"]<$p["total"]) $_CH[]=["logo_30x30"=>"none","title"=>"Стр. ".($p["current"]+1),"playlist_url"=>"$siteurl/?cat=$_GET[cat]&sort=$_GET[sort]&folder=$_GET[folder]&podb=$_GET[podb]&podbid=$_GET[podbid]&ttl=$_GET[ttl]&p=".($p["current"]+1),"position"=>"hlink"];
+	}
+	else if($p["current"]<$p["total"]) $_PL["next_page_url"]="$siteurl/?cat=$_GET[cat]&sort=$_GET[sort]&folder=$_GET[folder]&podb=$_GET[podb]&podbid=$_GET[podbid]&ttl=$_GET[ttl]&p=".($p["current"]+1);
 }
 
 function itemToCh($el){
-	global $siteurl;
+	global $siteurl,$_PL;
 	$genres="";
 	foreach($el["genres"] as $k=>$v) $genres.="$v[title] ";
 	$countries="";
 	foreach($el["countries"] as $k=>$v) $countries.="$v[title] ";
 	if($_GET["cat"]=="bookmarks") $menu[]=["logo_30x30"=>"$siteicon/add_box.png","title"=>"Удалить из закладок kinopub","playlist_url"=>"$siteurl/?cat=bookmarks&folder=$_GET[folder]&act=delbookm&id=$el[id]&title=".urlencode($el["title"])];
 	else $menu[]=["logo_30x30"=>"$siteicon/add_box.png","title"=>"Добавить в закладки kinopub","playlist_url"=>"$siteurl/?cat=bookmarks&act=addbookm&id=$el[id]&title=".urlencode($el["title"])];
-	return ["logo_30x30"=>$el["posters"]["small"],"title"=>$el["title"]." ".$el["year"]." ".$genres,"playlist_url"=>"$siteurl/?cat=view&id=$el[id]","description"=>"<div id=\"poster\" style=\"float:left;margin:0px 13px 1px 0px;\"><img src=\"".$el["posters"]["small"]."\" style=\"width:180px;float:left;\" /></div> Рейтинг imdb $el[imdb_rating] kp $el[kinopoisk_rating]<br>Год выхода	<span style=\"color:#6cc788;\">$el[year]</span><br>Страна	<span style=\"color:#6cc788;\">$countries</span><br>Жанр	<span style=\"color:#6cc788;\">$genres</span><br>Режиссёр	<span style=\"color:#6cc788;\">$el[director]</span><br>В ролях	<span style=\"color:#6cc788;\">".mb_substr($el["cast"],0,80)."</span><br>Длительность	<span style=\"color:#6cc788;\">".seconds_to_time($el["duration"]["average"])." / (".ceil($el["duration"]["average"]/60)." мин)</span><br>Субтитры	<span style=\"color:#6cc788;\">$el[subtitles]</span><br>Просмотрели	<span style=\"color:#6cc788;\">$el[views] раз</span><br>$el[plot]","menu"=>$menu];
+	if($_PL["typeList"]=="start") {
+		$title=$el["title"];
+		$desc=$el["year"]." ".$genres;
+	}
+	else {
+		$title=$el["title"]." ".$el["year"]." ".$genres;
+		$desc="<div id=\"poster\" style=\"float:left;margin:0px 13px 1px 0px;\"><img src=\"".$el["posters"]["small"]."\" style=\"width:180px;float:left;\" /></div> Рейтинг imdb $el[imdb_rating] kp $el[kinopoisk_rating]<br>Год выхода	<span style=\"color:#6cc788;\">$el[year]</span><br>Страна	<span style=\"color:#6cc788;\">$countries</span><br>Жанр	<span style=\"color:#6cc788;\">$genres</span><br>Режиссёр	<span style=\"color:#6cc788;\">$el[director]</span><br>В ролях	<span style=\"color:#6cc788;\">".mb_substr($el["cast"],0,80)."</span><br>Длительность	<span style=\"color:#6cc788;\">".seconds_to_time($el["duration"]["average"])." / (".ceil($el["duration"]["average"]/60)." мин)</span><br>Субтитры	<span style=\"color:#6cc788;\">$el[subtitles]</span><br>Просмотрели	<span style=\"color:#6cc788;\">$el[views] раз</span><br>$el[plot]";
+	}
+	$E=["logo_30x30"=>$el["posters"]["small"],"title"=>$title,"playlist_url"=>"$siteurl/?cat=view&id=$el[id]","description"=>$desc,"menu"=>$menu];
+	if($_PL["typeList"]=="start") $E["position"]="bigtile";
+	return $E;
 }
 
 function valid_auth($data){
@@ -497,7 +529,8 @@ function request($u,$data=""){
 	$cacheName="";
 	if(!is_array($data)&&!is_string($data)&&intval($data)>30){
 		if(!preg_match("/\/(user|bookmarks)/",$u)) {
-			$cacheName="cache/".md5($u);
+			if(!file_exists("/var/www/cache/kinopub")) mkdir("/var/www/cache/kinopub",0777,true);
+			$cacheName="/var/www/cache/kinopub/".md5($u);
 			if(time()<filemtime($cacheName)+intval($data)) {
 				$res=file_get_contents($cacheName);
 				if(!empty($res)) return json_decode($res,true);
@@ -559,11 +592,7 @@ function seconds_to_time($seconds){
 
 
 
-
-
-
-
-
+print json_encode($_PL);
 
 
 
